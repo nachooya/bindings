@@ -392,6 +392,18 @@ class Server extends EventEmitter {
             if (options.path && (!options.path.length || options.path[0] !== '/')) {
                 options.path = '/' + options.path;
             }
+            
+            var nativeGetConnections = this.httpServer.getConnections.bind(this.httpServer);
+            this.httpServer.getConnections = (cb) => {
+                nativeGetConnections((err, httpConnections) => {
+                    var wsConnections = native.server.group.getSize(this.serverGroup);
+                    if (err) {
+                      cb(null, wsConnections);
+                      return;
+                    }
+                    cb(null, wsConnections + httpConnections)
+                });
+            }
 
             this.httpServer.on('upgrade', this._upgradeListener = ((request, socket, head) => {
                 if (!options.path || options.path == request.url.split('?')[0].split('#')[0]) {
